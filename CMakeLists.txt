@@ -11,21 +11,20 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(xyz_interfaces REQUIRED)
+
+# include 디렉토리 추가
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # 노드 빌드 설정
-add_executable(yutnori_master_node src/main.cpp)
-ament_target_dependencies(yutnori_master_node rclcpp std_msgs std_srvs)
+add_executable(yutnori_master_node src/main.cpp src/master.cpp)
+ament_target_dependencies(yutnori_master_node rclcpp std_msgs std_srvs xyz_interfaces)
 
 # 빌드된 실행 파일을 설치할 위치 설정
 install(TARGETS
   yutnori_master_node
   DESTINATION lib/${PROJECT_NAME}
 )
-
-# 런치 파일이 있다면 설치 설정 (필요시 주석 해제)
-# install(DIRECTORY launch
-#   DESTINATION share/${PROJECT_NAME}/
-# )
 
 # 테스트 관련 설정
 if(BUILD_TESTING)
