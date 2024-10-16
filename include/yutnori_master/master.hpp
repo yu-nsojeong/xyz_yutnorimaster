@@ -1,54 +1,61 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <string>
+#include <tuple>
 #include "rclcpp/rclcpp.hpp"
-
-
-
 
 #include "xyz_interfaces/srv/yutnori_board_state.hpp"
 #include "xyz_interfaces/srv/yutnori_yut_state.hpp"
 #include "xyz_interfaces/srv/pick_place.hpp"
 #include "xyz_interfaces/srv/yut_pick.hpp"
 #include "xyz_interfaces/srv/yut_throw.hpp"
-#include "xyz_interfaces/srv/yut_pieces_poision.hpp" //
+#include "xyz_interfaces/srv/yut_position.hpp" //
+#include "xyz_interfaces/srv/yut_pick.hpp"
+#include "xyz_interfaces/srv/say_board_state.hpp"
+#include "xyz_interfaces/srv/say_special_state.hpp"
 
-using YutState = xyz_interfaces::srv::YutnoriYutState;
-using YutBoardState = xyz_interfaces::srv::YutnoriBoardState;
 
 class Player // 플레이어의 정보를 담고 있는 클래스
 {
 public:
-  int player_num;                   // 플레이어 번호
-  int pieces_count;                 // 말의 개수
-  std::array<int,4> pieces_location; // 말의 위치
-  int finish_pieces;                // 0부터 시작 이녀석과 말의 개수가 같아지면 게임이 끝남
+  int player_num    = -1;                   // 플레이어 번호
+  int pieces_count  = 4;                    // 말의 개수
+  std::vector<std::pair<int,int>> location = {{-1,1},{-2,1},{-3,1},{-4,1}}; //<index , tokens>
+  //std::array<int,4> pieces_location = {0,0,0,0}; // 말의 위치와 토큰
+  int finish_pieces = 0;                // 0부터 시작 이녀석과 말의 개수가 같아지면 게임이 끝남
+  std::string color = "red";
 
-  const int short_cut_index[4] = {5, 10, 33, 48}; // 지름길 인덱스
+  const int short_cut_index[4] = {5, 10, 22, 27}; // 지름길 인덱스
 
   const float bc[4] = {0,0,0,0};
+
   const std::map<int,std::tuple<float,float,float,float>> board_coor =
   {
-        {0, {1., 2., 0, 0}},{1, {1., 2., 0, 0}},{2, {1., 2., 0, 0}},{3, {1., 2., 0, 0}},{4, {1., 2., 0, 0}},
-        {5, {1., 2., 0, 0}},{6, {1., 2., 0, 0}},{7, {1., 2., 0, 0}},{8, {1., 2., 0, 0}},{9, {1., 2., 0, 0}},
-        {10, {1., 2., 0, 0}},{11, {1., 2., 0, 0}},{12, {1., 2., 0, 0}},{13, {1., 2., 0, 0}},{14, {1., 2., 0, 0}},
-        {15, {1., 2., 0, 0}},{16, {1., 2., 0, 0}},{17, {1., 2., 0, 0}},{18, {1., 2., 0, 0}},{19, {1., 2., 0, 0}},{20, {1., 2., 0, 0}},
 
-        {30, {1., 2., 0, 0}},{31, {1., 2., 0, 0}},{32, {1., 2., 0, 0}},{33, {1., 2., 0, 0}},{34, {1., 2., 0, 0}},
-        {35, {1., 2., 0, 0}},{36, {1., 2., 0, 0}},{37, {1., 2., 0, 0}},{38, {1., 2., 0, 0}},{39, {1., 2., 0, 0}},
-        {40, {1., 2., 0, 0}},{41, {1., 2., 0, 0}},//첫번째 지름길 대각선 지름길
+        {-1,{640.0, -305.0, 0, 0}}, {-2, {640.0, -305.0, 0, 0}},{-3, {640.0, -305.0, 0, 0}},{-4, {640.0, -305.0, 0, 0}},
+        {0, {640.0, -305.0, 0, 0}}, {1, {640.0, -235.0, 0, 0}}, {2, {640.0, -180.0, 0, 0}},{3, {640.0, -120.0, 0, 0}},{4, {640.0, -60.0, 0, 0}},{5, {640.0, 20.0, 0, 0}},
+        {6, {570.0, 19.0, 0, 0}},   {7, {510.0, 18.0, 0, 0}},   {8, {450.0, 17.0, 0, 0}},{9, {390.0, 16.0, 0, 0}},{10, {320.0, 15.0, 0, 0}},
+        {11,{320.0, -55.0, 0, 0}},  {12, {320.0, -115.0, 0, 0}},{13, {320.0, -175.0, 0, 0}},{14, {320.0, -235.0, 0, 0}},{15, {320.0, -305.0, 0, 0}},
+        {16,{390.0, -305.0, 0, 0}}, {17, {450.0, -305.0, 0, 0}},{18, {510.0, -305.0, 0, 0}},{19, {570.0, -305.0, 0, 0}},
 
-        {45, {1., 2., 0, 0}},{46, {1., 2., 0, 0}},{47, {1., 2., 0, 0}},{48, {1., 2., 0, 0}},{49, {1., 2., 0, 0}},
-        {50, {1., 2., 0, 0}},{51, {1., 2., 0, 0}}//두번째 지름길 대각선 지름길
+        {20, {480.0, -145.0, 0, 0}},
+        {21, {1., 2., 0, 0}},{22, {1., 2., 0, 0}},
+        {23, {1., 2., 0, 0}},{24, {1., 2., 0, 0}},
+        {25, {1., 2., 0, 0}},{26, {1., 2., 0, 0}},
+        {27, {1., 2., 0, 0}},{28, {1., 2., 0, 0}},
+        {30, {640.0, -305.0, 0, 0}}
   };
+
 
   // 플레이어 보드의 사항
   //
-  Player() : player_num(0), pieces_count(4), finish_pieces(4){}
-  ~Player() {}
+  Player(){}
+  Player(int playernum){player_num = playernum;}
+  ~Player(){}
 
   //
-  bool isend()
+  bool isGmaeFinish()
   {
     bool result = false;
     if (finish_pieces == pieces_count)
@@ -60,49 +67,41 @@ public:
 class Master : public rclcpp::Node
 {
 public:
-  Player robot;    // my
+  Player robot;   // my
   Player player;  // other
   int turn_count;  // 0으로 리셋(0이 첫번째)
-  int player_num;  // 몇명의 플레이어가 있는지
+  int player_num = 2;  // 몇명의 플레이어가 있는지
   int current_yut; // 윷 상태// 도 :1,개: 2,걸 : 3, 윷 : 4, 모 : 5, 빽도 : -1
 
-  Master() : Node("yutnori_master"), player_num(2)
+  Master() : Node("yutnori_master"), robot(0), player(1)
   {
-    // player = new Player[player_num];
-    // for (int i = 0; i < player_num; i++)
-    //   player[i].player_num = i + 1;
 
     // 서비스 클라이언트 생성
-    client_yut      = this->create_client<xyz_interfaces::srv::YutnoriYutState>("see_yutnori_state");
-    client_position = this->create_client<xyz_interfaces::srv::PickPlace>("pick_place");
-    client_yut_pos  = this->create_client<xyz_interfaces::srv::YutPiecesPoision>("yut_pieces_position");
-    client_board = this->create_client<xyz_interfaces::srv::YutnoriBoardState>("pieces_location");
+    client_yut          = this->create_client<xyz_interfaces::srv::YutnoriYutState>("yutnori_yut_state");
+    client_board        = this->create_client<xyz_interfaces::srv::YutnoriBoardState>("yutnori_board_state");
+    client_pickplace    = this->create_client<xyz_interfaces::srv::PickPlace>("pick_place");
+    client_throw        = this->create_client<xyz_interfaces::srv::YutThrow>("yut_throw");
+    client_yut_pos      = this->create_client<xyz_interfaces::srv::YutPosition>("yut_position");
+    client_pick_put     = this->create_client<xyz_interfaces::srv::YutPick>("yut_pick");
+    client_say_board    = this->create_client<xyz_interfaces::srv::SayBoardState>("say_board_state");
+    client_say_special  = this->create_client<xyz_interfaces::srv::SaySpecialState>("say_special_state");
+
+    // // 서비스가 준비될 때까지 대기
+    //while (!client_pickplace->wait_for_service(std::chrono::seconds(1))){RCLCPP_INFO(this->get_logger(), "Waiting for service2 to appear...");}
+
 
     RCLCPP_INFO(this->get_logger(), "Wait...44");
     playGame();
-    // 서비스가 준비될 때까지 대기
-    // while (!client_yut->wait_for_service(std::chrono::seconds(1)))
-    // {
-    //   RCLCPP_INFO(this->get_logger(), "Waiting for service1 to appear...");
-    // }
-
-    // // picplace
-
-    // // 서비스가 준비될 때까지 대기
-    // while (!client_position->wait_for_service(std::chrono::seconds(1)))
-    // {
-    //   RCLCPP_INFO(this->get_logger(), "Waiting for service2 to appear...");
-    // }
 
   } // 노드 이름을 명시적으로 설정
   ~Master() { /*delete player;*/ }
 
   // 추가적인 게임 로직이나 멤버 함수가 여기에 추가될 수 있음
 
-  void starGame();  // 게임 셋팅을 위한 리셋
+
   void playGame();  // 전체적인 게임 플레이
-  void gameReset(); // 게임 재시도 할 때 리셋해주는 거
-  bool endGame();   // 게임 끝남 // 말이 다 들어온 플레이어가 있거나, 걍 강제종료 했을 때.
+  void gameReset(); // 게임 재시도 할 때 리셋해주는 거 아직 구현 x
+  bool endGame();   //ok // 게임 끝남 // 말이 다 들어온 플레이어가 있거나, 걍 강제종료 했을 때.
 
   bool isMyTurn(const Player &player); // "player" 턴인지 확인
 
@@ -118,9 +117,24 @@ public:
 
   // 움직임
   void pickAndPlace(float x = 0, float y = 0, float z = 0, float rotate = 0, float x2 = 0, float y2 = 0, float z2 = 0, float rotate2 = 0); // 그리퍼의 움직임 좌표
-  void send_request(const std::array<float, 4> &pick_pos, const std::array<float, 4> &place_pos);
-  void send_request_yut_pos(float (& pos)[4],int & left);
+  void pickAndPlace(int pick_index, int place_index, float place_z = 0);
+
+
+
+  //send request
+
   int send_request_yut_res();
+  void send_request_pick_place(const std::array<float, 4> &pick_pos, const std::array<float, 4> &place_pos);
+  void send_request_yut_pos(float (& pos)[4],int & left);
+  void send_request_yut_throw();
+  void send_request_board_state(std::vector<std::pair<int, int>> &player1,
+                                std::vector<std::pair<int, int>> &player2);
+  void send_request_yut_pick(float x, float y, float z, float r);
+
+
+  void send_request_say_board_state();
+  void send_request_say_special_state(string say);
+
 
 
 
@@ -134,16 +148,17 @@ private:
     {c[0] - 1.5, c[3] - 1.5, c[3] + 0, c[4] + 0}
   };
 
-
-
-
-
   rclcpp::Client<xyz_interfaces::srv::YutnoriYutState>::SharedPtr     client_yut;       // Yut 던지고 어떤 윷이 나왔는지 알게 해 주는 스마트 포인터
-  rclcpp::Client<xyz_interfaces::srv::YutnoriBoardState>::SharedPtr   client_board;     // 현재 보드 상태가 어떤지(상대)
-  rclcpp::Client<xyz_interfaces::srv::PickPlace>::SharedPtr         client_position;  // 두산으로 가는 메세지1
-  rclcpp::Client<xyz_interfaces::srv::YutThrow>::SharedPtr          client_throw;     //던지게 하는 클라이언트
-  rclcpp::Client<xyz_interfaces::srv::YutPiecesPoision>::SharedPtr  client_yut_pos;   //던진 후 YUt의 위치
-  //rclcpp::Client<xyz_interfaces::srv::YutnoriBoardState>::SharedPtr client_pieces_location; //
+  rclcpp::Client<xyz_interfaces::srv::YutnoriBoardState>::SharedPtr   client_board;     // 현재 보드 상태가 어떤지(상태) 말 위치와 말 몇개 올려있는지
+  rclcpp::Client<xyz_interfaces::srv::PickPlace>::SharedPtr           client_pickplace;  // 두산으로 가는 메세지1
+  rclcpp::Client<xyz_interfaces::srv::YutThrow>::SharedPtr            client_throw;     // 던지게 하는 클라이언트
+  rclcpp::Client<xyz_interfaces::srv::YutPosition>::SharedPtr         client_yut_pos;   // 던진 후 YUt의 위치
+  rclcpp::Client<xyz_interfaces::srv::YutPick>::SharedPtr             client_pick_put;
+  rclcpp::Client<xyz_interfaces::srv::SayBoardState>::SharedPtr       client_say_board;
+  rclcpp::Client<xyz_interfaces::srv::SaySpecialState>::SharedPtr     client_say_special;
+
+
+
 };
 
 
