@@ -14,12 +14,12 @@ void Master::playGame()
 
 #define testmode 1
 
-  RCLCPP_INFO(this->get_logger(), "Game Player11111...");
-  while (endGame())
+  RCLCPP_INFO(this->get_logger(), "Game Player");
+  while (!endGame())
   {
     if (isMyTurn(robot)) // 내 턴인 경우
     {
-      RCLCPP_INFO(this->get_logger(), "myturn...");
+      RCLCPP_INFO(this->get_logger(), "myturn...8888");
       // 윷 정리 //윷 위치 받아오기.(4개 다? 부딪히면 난리나니까 걍 4번 반복이 나을 듯)//위치 이동, 모션 실행 //
       cleanUpBoard();
       // 윷을 던지기 (잡기)
@@ -50,7 +50,7 @@ void Master::playGame()
       // 윷과 모가 나오지 않았다면 턴을 종료
       if (yut_state != 5 && yut_state != 4){
         send_request_say_board_state();
-        send_request_say_special_state("I'm done with my turn. Send me something to say");
+        send_request_say_special_state(std::string("I'm done with my turn. Send me something to say"));
         this->turn_count++;
       }
 
@@ -66,11 +66,15 @@ void Master::gameReset()
 }
 bool Master::endGame()
 {
-  if (robot.isGmaeFinish())
+  if (robot.isGmaeFinish()){
+    //send_request_say_special_state(std::string("When I won"));
     return true;
-  if (player.isGmaeFinish())
-    return true;
+  }
 
+  if (player.isGmaeFinish()){
+    //send_request_say_special_state(std::string("When the opponent wins"));
+    return true;
+  }
   return false;
 }
 
@@ -244,7 +248,7 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
   if(Arrivalflag)
   {
     next_pos = 30;
-    send_request_say_special_state("My token has reached the destination, and I earned points!");
+    send_request_say_special_state(std::string("My token has reached the destination, and I earned points!"));
     return index;
   };
 
@@ -272,7 +276,7 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
       if (player.location[k].first == new_pos[i]) // 같은 위치에 상대 말이 있는지 확인
       {
         RCLCPP_INFO(this->get_logger(), "Captured opponent's piece at position %d!", new_pos);
-        send_request_say_special_state("Write down what you want to say when you catch the opponent's token");
+        send_request_say_special_state(std::string("Write down what you want to say when you catch the opponent's token"));
         pickAndPlace(new_pos[i],0); //겹치는 부분 치우는 부분
         // player[j].pieces_location[k] = 0; // 상대 말 다시 시작 위치로
         next_pos = new_pos[i];
@@ -565,7 +569,7 @@ void Master::send_request_yut_pick(float x, float y, float z, float r){
 
 
   }
-  void Master::send_request_say_special_state(std::string say)
+  void Master::send_request_say_special_state(const std::string& say)
   {
 
 

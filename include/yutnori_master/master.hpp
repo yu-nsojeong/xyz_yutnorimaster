@@ -60,7 +60,11 @@ public:
     bool result = false;
     if (finish_pieces == pieces_count)
       result = true;
+
+    std::cout<<"dldl"<<result<< finish_pieces << ","<<pieces_count <<std::endl;
     return result;
+
+
   };
 };
 
@@ -90,7 +94,7 @@ public:
     //while (!client_pickplace->wait_for_service(std::chrono::seconds(1))){RCLCPP_INFO(this->get_logger(), "Waiting for service2 to appear...");}
 
 
-    RCLCPP_INFO(this->get_logger(), "Wait...44");
+    RCLCPP_INFO(this->get_logger(), "Wait...");
     playGame();
 
   } // 노드 이름을 명시적으로 설정
@@ -133,7 +137,7 @@ public:
 
 
   void send_request_say_board_state();
-  void send_request_say_special_state(string say);
+  void send_request_say_special_state(const std::string& say);
 
 
 
