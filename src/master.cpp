@@ -6,73 +6,99 @@ bool Master::isMyTurn(const Player &player)
   if (player.player_num == this->turn_count % this->player_num)
     is = true;
 
+
+  std::cout<<"this->turn_count"<<this->turn_count<<std::endl;
   return is;
 }
 
-void Master::playGame()
+
+void Master::timer_callback()
 {
+
+  this->timer_->cancel();
+
 
 #define testmode 1
 
   RCLCPP_INFO(this->get_logger(), "Game Player");
-  while (!endGame())
+  if (!endGame())
   {
     if (isMyTurn(robot)) // 내 턴인 경우
     {
-      RCLCPP_INFO(this->get_logger(), "myturn...8888");
+      RCLCPP_INFO(this->get_logger(), "myturn...999");
       // 윷 정리 //윷 위치 받아오기.(4개 다? 부딪히면 난리나니까 걍 4번 반복이 나을 듯)//위치 이동, 모션 실행 //
-      cleanUpBoard();
+      //cleanUpBoard();
       // 윷을 던지기 (잡기)
-      throwYut();
+      //throwYut();
       // 윷의 상태 확인(결과)
       int yut_state;
-#if 0
-    yut_state = yutAnalysis(); // 도개걸윷모 어떤 것이 나왔는지
-#endif
-#if testmode
-      std::cout << "yut state : " << std::endl;
-      std::cin >> yut_state;
-#endif
+      if (testmode)
+      {
+        std::cout << "yut state : " << std::endl;
+        std::cin >> yut_state;
+      }
+      else
+      {
+        yut_state = yutAnalysis(); // 도개걸윷모 어떤 것이 나왔는지
+      }
 
       // 상대 말판의 상태 확인 //player board update
-      seeOtherBoard();
-      //!-- 내 보드 보고 업데이트 잡혔을 때를 대비
-      //seeMyBoard();
+      //seeOtherBoard();
+      // 내 보드 보고 업데이트 잡혔을 때를 대비
+      // seeMyBoard();
 
       // 최적의 움직임 계산
       int move_index;
       int next_pos;
       move_index = boardAnalysis(yut_state, next_pos);
 
+
       // 로봇 말 이동 내 보드 상태 업데이트
       movePieces(move_index, next_pos);
 
       // 윷과 모가 나오지 않았다면 턴을 종료
-      if (yut_state != 5 && yut_state != 4){
-        send_request_say_board_state();
-        send_request_say_special_state(std::string("I'm done with my turn. Send me something to say"));
+      if (yut_state != 5 && yut_state != 4)
+      {
+        //send_request_say_board_state();
+        //send_request_say_special_state(std::string("I'm done with my turn. Send me something to say"));
         this->turn_count++;
       }
-
     }
     else
     {
 
+      RCLCPP_INFO(this->get_logger(), "yourturn...8888");
     }
+
+    print_dbg();
   }
+  else{
+    RCLCPP_INFO(this->get_logger(), "game end!");
+  }
+
+
+  this->timer_->reset();
 }
+
+void Master::playGame()
+{
+
+}
+
 void Master::gameReset()
 {
 }
 bool Master::endGame()
 {
-  if (robot.isGmaeFinish()){
-    //send_request_say_special_state(std::string("When I won"));
+  if (robot.isGmaeFinish())
+  {
+    // send_request_say_special_state(std::string("When I won"));
     return true;
   }
 
-  if (player.isGmaeFinish()){
-    //send_request_say_special_state(std::string("When the opponent wins"));
+  if (player.isGmaeFinish())
+  {
+    // send_request_say_special_state(std::string("When the opponent wins"));
     return true;
   }
   return false;
@@ -93,8 +119,7 @@ void Master::cleanUpBoard()
       break; // 남은게 없으면 끝내기
     // 좌표가지고 픽엔 플레이스 하는데 , 플레이스는 이미 지정 위치 있으니까 디파인 해놔야겠다.
 
-    send_request_yut_pick(pos[0],pos[1],pos[2],pos[3]);
-
+    send_request_yut_pick(pos[0], pos[1], pos[2], pos[3]);
   }
 }
 
@@ -112,6 +137,93 @@ void Master::seeOtherBoard()
   { // robot이 blue면 상대는 red red는 1
     this->player.location = redPlayer;
   }
+}
+
+void Master::seeMyBoard(){
+
+  std::vector<std::pair<int, int>> redPlayer;
+  std::vector<std::pair<int, int>> bluePlayer;
+  send_request_board_state(redPlayer, bluePlayer);
+
+  bool index[robot.location.size()] = {false,};
+
+  if (this->robot.color == "red") // robot이 red면 상대는 blue 는 2
+  {
+    // 인덱스 맞는거 잡고 안 맞으면 안 맞은 만큼 업뎃 해줘야 겠지...
+    for(size_t i = 0; i < redPlayer.size(); i++)
+    {
+      for(size_t j = 0 ; j < robot.location.size(); j++ )
+      {
+        if(redPlayer[i].first == robot.location[j].first)
+        {
+          index[j] = true;
+          break;
+        }
+      }
+    }
+    //flase 되어있으면 삭제된거임
+    int delete_tokens = 0;
+    for(size_t i = 0; i < robot.location.size(); i++){
+      if(index[i] == false)
+      {
+        delete_tokens = delete_tokens + robot.location[i].second;
+        robot.location.erase(robot.location.begin() + i);
+      }
+
+    }
+    //삭제된 만큼 채워주기
+    for (size_t i = 0; i < delete_tokens; i++)
+    {
+      for(int j = -1;  j >= -4 ; j--)
+      {
+        auto it = std::find_if(robot.location.begin(), robot.location.end(), [j](const std::pair<int, int>& element) {
+        return element.first == j;});
+        if(it == robot.location.end())// 끝까지 안 나옴
+        {
+          robot.location.push_back(std::make_pair(j,1));
+        }
+      }
+    }
+  }
+  else
+  { // robot이 blue면 상대는 red red는 1
+        // 인덱스 맞는거 잡고 안 맞으면 안 맞은 만큼 업뎃 해줘야 겠지...
+    for(size_t i = 0; i < bluePlayer.size(); i++)
+    {
+      for(size_t j = 0 ; j < robot.location.size(); j++ )
+      {
+        if(bluePlayer[i].first == robot.location[j].first)
+        {
+          index[j] = true;
+          break;
+        }
+      }
+    }
+    //flase 되어있으면 삭제된거임
+    int delete_tokens = 0;
+    for(size_t i = 0; i < robot.location.size(); i++){
+      if(index[i] == false)
+      {
+        delete_tokens = delete_tokens + robot.location[i].second;
+        robot.location.erase(robot.location.begin() + i);
+      }
+
+    }
+    //삭제된 만큼 채워주기
+    for (size_t i = 0; i < delete_tokens; i++)
+    {
+      for(int j = -1;  j >= -4 ; j--)
+      {
+        auto it = std::find_if(robot.location.begin(), robot.location.end(), [j](const std::pair<int, int>& element) {
+        return element.first == j;});
+        if(it == robot.location.end())// 끝까지 안 나옴
+        {
+          robot.location.push_back(std::make_pair(j,1));
+        }
+      }
+    }
+  }
+
 }
 
 void Master::throwYut()
@@ -133,29 +245,41 @@ int Master::yutAnalysis()
 void Master::movePieces(int piece_index, int next_pos)
 {
   int current_pos = robot.location[piece_index].first;
+  int current_tokens = robot.location[piece_index].second;
   robot.location.erase(robot.location.begin() + piece_index);
+  //print_dbg();
 
+  std::cout<<" move : "<<current_pos<<"next : "<<next_pos<<std::endl;
   float place_z = 0;
   const float height = 10;
   bool overlap = false;
-  for(int i = 0 ; i < robot.location.size(); i++){// 겹치는 값이 있는지 확인 하여 z 값 변화.
+  for (int i = 0; i < robot.location.size(); i++)
+  { // 겹치는 값이 있는지 확인 하여 z 값 변화.
 
-    if(robot.location[i].first == next_pos)
+    if (robot.location[i].first == next_pos)
     {
 
+      std::cout<<"nononononononoon"<<std::endl;
+
       robot.location[i].second++;
-      place_z = (robot.location[i].second - 1)*height;//
-      overlap == true;
+      place_z = (robot.location[i].second - 1) * height; //
+      overlap = true;
       break;
-
     }
+  }
+
+  if (!overlap)
+  {
+
+    std::cout<<"lakdjfklasdjfkljaslkdfjlasf"<<std::endl;
+    robot.location.push_back(std::make_pair(next_pos, current_tokens));
+  }
+
+  if(next_pos == 30){// 도착했다면
+    robot.finish_pieces +=  current_tokens;
 
   }
-  if(!overlap){
-    robot.location.push_back(std::make_pair(next_pos,1));
-  }
-  pickAndPlace(current_pos, next_pos,place_z);
-
+  //pickAndPlace(current_pos, next_pos, place_z);
 }
 void Master::boardUpDate()
 {
@@ -182,7 +306,7 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
 
   for (int i = 0; i < robot.location.size(); ++i) // 말의 다음위치 구하기 현재 위치가 지름길 위치인지? 지름길 위치라면 들어간 걸로 숫자 바꿔주기 아니라면 그냥 더하기
   {
-    int current_pos = robot.location[i].first; // index
+    int current_pos = robot.location[i].first;   // index
     if (robot.short_cut_index[0] == current_pos) // 5
     {
       new_pos[i] = 19 + move_steps;
@@ -197,19 +321,20 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
     }
     else if (current_pos < 0)
     {
-       new_pos[i] = 0 + move_steps;
+      new_pos[i] = 0 + move_steps;
     }
     else
     {
 
       new_pos[i] = current_pos + move_steps;
 
-      if( 20 < current_pos && current_pos < 24 ) // 지름길에서 나오는 경우
+      if (20 < current_pos && current_pos < 24) // 지름길에서 나오는 경우
       {
-          new_pos[i] -= 10;
+        new_pos[i] -= 10;
       }
     }
   }
+  std::cout<<"aaaa"<<std::endl;
 
   int max_tokens = -1;
   int min_left = 100;
@@ -220,39 +345,38 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
   {
     int left = 100;
 
-    if(new_pos[i] >= 30)// 무조건 들어간 겨
+    if (new_pos[i] >= 30) // 무조건 들어간 겨
     {
       left = new_pos[i] - 30;
       if (max_tokens <= robot.location[i].second && left <= min_left)
       { // update
-          index = i;
-          max_tokens = robot.location[i].second;
-          min_left = left;
-          next_pos = new_pos[i];
-          Arrivalflag = true;
+        index = i;
+        max_tokens = robot.location[i].second;
+        min_left = left;
+        next_pos = new_pos[i];
+        Arrivalflag = true;
       }
     }
-    else if ((15 < robot.location[i].first && robot.location[i].first <= 19) && 20 <= new_pos[i])// 바깥 들어간 겨
+    else if ((15 < robot.location[i].first && robot.location[i].first <= 19) && 20 <= new_pos[i]) // 바깥 들어간 겨
     {
       left = new_pos[i] - 20;
       if (max_tokens <= robot.location[i].second && left <= min_left)
       { // update
-          index = i;
-          max_tokens = robot.location[i].second;
-          min_left = left;
-          next_pos = new_pos[i];
-          Arrivalflag = true;
+        index = i;
+        max_tokens = robot.location[i].second;
+        min_left = left;
+        next_pos = new_pos[i];
+        Arrivalflag = true;
       }
     }
   }
-  if(Arrivalflag)
+  std::cout<<"bbbb"<<std::endl;
+  if (Arrivalflag)
   {
     next_pos = 30;
-    send_request_say_special_state(std::string("My token has reached the destination, and I earned points!"));
+    //!send_request_say_special_state(std::string("My token has reached the destination, and I earned points!"));
     return index;
   };
-
-
 
   // 2. 겹칠 수 있는지 확인 (같은 말이 같은 위치에 있는지)
   for (int i = 0; i < new_pos_size; ++i)
@@ -277,8 +401,9 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
       {
         RCLCPP_INFO(this->get_logger(), "Captured opponent's piece at position %d!", new_pos);
         send_request_say_special_state(std::string("Write down what you want to say when you catch the opponent's token"));
-        pickAndPlace(new_pos[i],0); //겹치는 부분 치우는 부분
+        pickAndPlace(new_pos[i], 0); // 겹치는 부분 치우는 부분
         // player[j].pieces_location[k] = 0; // 상대 말 다시 시작 위치로
+        kill_flag = true;
         next_pos = new_pos[i];
         return i;
       }
@@ -322,18 +447,18 @@ void Master::pickAndPlace(float x, float y, float z, float rotate, float x2, flo
   send_request_pick_place(pick_pos, place_pos);
 }
 
-void Master::pickAndPlace(int pick_index, int place_index, float place_z){
+void Master::pickAndPlace(int pick_index, int place_index, float place_z)
+{
 
-  if(place_index > 30) place_index = 30;
+  if (place_index > 30)
+    place_index = 30;
 
-  std::tuple<float, float, float, float> pick  = robot.board_coor.at(pick_index);
+  std::tuple<float, float, float, float> pick = robot.board_coor.at(pick_index);
   std::tuple<float, float, float, float> place = robot.board_coor.at(place_index);
 
-  pickAndPlace(std::get<0>(pick),std::get<1>(pick),std::get<2>(pick),std::get<3>(pick),
-                std::get<0>(place),std::get<1>(place),std::get<2>(place)+place_z,std::get<3>(place));
-
+  pickAndPlace(std::get<0>(pick), std::get<1>(pick), std::get<2>(pick), std::get<3>(pick),
+               std::get<0>(place), std::get<1>(place), std::get<2>(place) + place_z, std::get<3>(place));
 }
-
 
 // 윷 던진 결과 알려달라고 요청 보내는 함수
 int Master::send_request_yut_res()
@@ -487,14 +612,12 @@ void Master::send_request_yut_throw()
   }
 }
 
-
-
-void Master::send_request_yut_pick(float x, float y, float z, float r){
-
+void Master::send_request_yut_pick(float x, float y, float z, float r)
+{
 
   // 요청 객체 생성
   auto request = std::make_shared<xyz_interfaces::srv::YutPick::Request>();
-  std::array<float,4> pickpos = {x,y,z,r};
+  std::array<float, 4> pickpos = {x, y, z, r};
   request->pick_pos = pickpos;
 
   // 비동기 요청 보내고 응답을 기다림
@@ -512,36 +635,30 @@ void Master::send_request_yut_pick(float x, float y, float z, float r){
     {
       RCLCPP_INFO(this->get_logger(), "Pick and place operation succeeded.");
     }
-
   }
   else
   {
     // 서비스 호출 실패
     RCLCPP_ERROR(this->get_logger(), "Failed to call service pick_and_place.");
   }
-
-
 }
 
+void Master::send_request_say_board_state()
+{
 
-  void Master::send_request_say_board_state()
-  {
-
-      // 요청 객체 생성
+  // 요청 객체 생성
   auto request = std::make_shared<xyz_interfaces::srv::SayBoardState::Request>();
 
   for (size_t i = 0; i < robot.location.size(); i++)
   {
     request->positions_p1.push_back(robot.location[i].first);
     request->tokens_p1.push_back(robot.location[i].second);
-
   }
 
   for (size_t i = 0; i < player.location.size(); i++)
   {
     request->positions_p2.push_back(player.location[i].first);
     request->tokens_p2.push_back(player.location[i].second);
-
   }
 
   // 비동기 요청 보내고 응답을 기다림
@@ -559,24 +676,19 @@ void Master::send_request_yut_pick(float x, float y, float z, float r){
     {
       RCLCPP_INFO(this->get_logger(), "send_request_say_board_state operation succeeded.");
     }
-
   }
   else
   {
     // 서비스 호출 실패
     RCLCPP_ERROR(this->get_logger(), "Failed to call service send_request_say_board_state.");
   }
-
-
-  }
-  void Master::send_request_say_special_state(const std::string& say)
-  {
-
+}
+void Master::send_request_say_special_state(const std::string &say)
+{
 
   // 요청 객체 생성
   auto request = std::make_shared<xyz_interfaces::srv::SaySpecialState::Request>();
   request->script = say;
-
 
   // 비동기 요청 보내고 응답을 기다림
   auto result_future = client_say_special->async_send_request(request);
@@ -593,13 +705,10 @@ void Master::send_request_yut_pick(float x, float y, float z, float r){
     // {
     //   RCLCPP_INFO(this->get_logger(), "Pick and place operation succeeded.");
     // }
-
   }
   else
   {
     // 서비스 호출 실패
     RCLCPP_ERROR(this->get_logger(), "Failed to call service send_request_say_special_state.");
   }
-
-
-  }
+}
