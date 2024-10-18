@@ -14,9 +14,10 @@
 #include "xyz_interfaces/srv/yut_throw.hpp"
 #include "xyz_interfaces/srv/yut_position.hpp" //
 #include "xyz_interfaces/srv/yut_pick.hpp"
-#include "xyz_interfaces/srv/say_board_state.hpp"
-#include "xyz_interfaces/srv/say_special_state.hpp"
+
+#include "xyz_interfaces/srv/next_turn.hpp"
 #include "std_msgs/msg/bool.hpp"
+
 
 class Player // 플레이어의 정보를 담고 있는 클래스
 {
@@ -37,22 +38,20 @@ public:
   const std::map<int, std::tuple<float, float, float, float>> board_coor =
       {
 
-          {-1, {640.0, -305.0, 30, 0}}, {-2, {640.0, -305.0, 0, 0}}, {-3, {640.0, -305.0, 0, 0}}, {-4, {640.0, -305.0, 0, 0}},
-          {0, {640.0, -305.0, 20, 0}}, {1, {640.0, -235.0, 20, 0}}, {2, {640.0, -180.0, 20, 0}}, {3, {640.0, -120.0, 20, 0}}, {4, {640.0, -60.0, 0, 0}},
-          {5, {640.0, 20.0, 0, 0}}, {6, {570.0, 19.0, 0, 0}}, {7, {510.0, 18.0, 0, 0}}, {8, {450.0, 17.0, 0, 0}}, {9, {390.0, 16.0, 0, 0}},
-          {10, {320.0, 15.0, 0, 0}}, {11, {320.0, -55.0, 0, 0}}, {12, {320.0, -115.0, 0, 0}}, {13, {320.0, -175.0, 0, 0}}, {14, {320.0, -235.0, 0, 0}},
-          {15, {320.0, -305.0, 0, 0}}, {16, {390.0, -305.0, 0, 0}}, {17, {450.0, -305.0, 0, 0}}, {18, {510.0, -305.0, 0, 0}}, {19, {570.0, -305.0, 0, 0}},
+        {0, {640.0, -305.0, 5, 0}}, {1, {640.0, -235.0, 5, 0}}, {2, {640.0, -180.0, 5, 0}}, {3, {640.0, -120.0, 5, 0}}, {4, {640.0, -60.0, 5, 0}},
+        {5, {640.0, 20.0, 5, 0}},   {6, {570.0, 19.0, 3, 0}},   {7, {510.0, 18.0, 1, 0}},   {8, {450.0, 17.0, 0, 0}},   {9, {390.0, 16.0, 0, 0}},
+        {10, {320.0, 15.0, 0, 0}},  {11, {320.0, -55.0, 3, 0}}, {12, {320.0, -115.0, 1, 0}},{13, {320.0, -175.0, 0, 0}},{14, {320.0, -235.0, 0, 0}},
+        {15, {320.0, -305.0,0, 0}}, {16, {390.0, -305.0, 0, 0}},{17, {450.0, -305.0, 0, 0}},{18, {510.0, -305.0, 0, 0}},{19, {570.0, -305.0, 0, 0}},
 
-          {20, {480.0, -145.0, 0, 0}},
-          {21, {1., 2., 0, 0}},
-          {22, {1., 2., 0, 0}},
-          {23, {1., 2., 0, 0}},
-          {24, {1., 2., 0, 0}},
-          {25, {1., 2., 0, 0}},
-          {26, {1., 2., 0, 0}},
-          {27, {1., 2., 0, 0}},
-          {28, {1., 2., 0, 0}},
-          {30, {640.0, -305.0, 0, 0}}};
+        {20, {580.0, -40.0, 0, 0}}, {21, {540.0, -80.0, 0, 0}}, {22, {480.0, -145.0, 3, 0}},  {23,  {420.0, -205.0, 0, 0}}, {24, {380.0, -245.0, 0, 0}},
+        {25, {380.0, -45.0, 0, 0}}, {26, {425.0, -85.0, 0, 0}}, {27, {480.0, -145.0, 3, 0}},  {28, {540.0, -205.0, 0, 0}},  {29, {580.0, -245.0, 0, 0}},
+
+        {-1, {390.0, 76.0, 0, 0}},    {-2, {450.0, 77.0, 0, 0}},  {-3, {510.0, 80.0, 3, 0}},  {-4, {570.0, 80.0, 3, 0}},
+        {-5, {390.0, -370.0, 0, 0}},  {-6, {450.0, -370.0, 0, 0}},{-7, {510.0, -370.0, 3, 0}},{-8, {570.0, -370.0, 3, 0}},
+
+        {30, {100.0, -305.0, 0, 0}}
+
+      };
 
   // 플레이어 보드의 사항
   //
@@ -67,7 +66,7 @@ public:
     if (finish_pieces == pieces_count)
       result = true;
 
-    std::cout << "dldl" << result << finish_pieces << "," << pieces_count << std::endl;
+    std::cout << "finish_pieces : " << finish_pieces << std::endl;
     return result;
   };
 };
@@ -91,19 +90,20 @@ public:
   Master() : Node("yutnori_master"), robot(0), player(1)
   {
 
-    timer_ = this->create_wall_timer(
-        std::chrono::seconds(1),
-        std::bind(&Master::timer_callback, this));
+    // timer_ = this->create_wall_timer(
+    //     std::chrono::seconds(1),
+    //     std::bind(&Master::timer_callback, this));
 
     // 서비스 클라이언트 생성
     client_yut = this->create_client<xyz_interfaces::srv::YutnoriYutState>("yutnori_yut_state");
-    client_board = this->create_client<xyz_interfaces::srv::YutnoriBoardState>("yutnori_board_state");
+    client_board = this->create_client<xyz_interfaces::srv::YutnoriBoardState>("board_state");
     client_pickplace = this->create_client<xyz_interfaces::srv::PickPlace>("pick_place");
     client_throw = this->create_client<xyz_interfaces::srv::YutThrow>("yut_throw");
     client_yut_pos = this->create_client<xyz_interfaces::srv::YutPosition>("yut_position");
     client_pick_put = this->create_client<xyz_interfaces::srv::YutPick>("yut_pick");
-    client_say_board = this->create_client<xyz_interfaces::srv::SayBoardState>("say_board_state");
-    client_say_special = this->create_client<xyz_interfaces::srv::SaySpecialState>("say_special_state");
+    Client_next_turn = this->create_client<xyz_interfaces::srv::NextTurn>("next_turn");
+    //client_say_board = this->create_client<xyz_interfaces::srv::SayBoardState>("say_board_state");
+    //client_say_special = this->create_client<xyz_interfaces::srv::SaySpecialState>("say_special_state");
 
     subscription_ = this->create_subscription<std_msgs::msg::Bool>(
         "topic", 10, std::bind(&Master::topic_callback, this, std::placeholders::_1));
@@ -112,6 +112,13 @@ public:
     // while (!client_pickplace->wait_for_service(std::chrono::seconds(1))){RCLCPP_INFO(this->get_logger(), "Waiting for service2 to appear...");}
 
     RCLCPP_INFO(this->get_logger(), "Wait...");
+
+
+    while(1)
+    {
+      playGame();
+
+    }
 
   } // 노드 이름을 명시적으로 설정
   ~Master() { /*delete player;*/ }
@@ -150,8 +157,10 @@ public:
                                 std::vector<std::pair<int, int>> &player2);
   void send_request_yut_pick(float x, float y, float z, float r);
 
-  void send_request_say_board_state();
-  void send_request_say_special_state(const std::string &say);
+  void send_request_next_turn();
+
+  //void send_request_say_board_state();
+  //void send_request_say_special_state(const std::string &say);
   void print_dbg()
   {
 
@@ -176,6 +185,7 @@ public:
     {
       std::cout << player.location[i].second << " ";
     }
+    std::cout << std::endl;
   }
 
 private:
@@ -192,16 +202,21 @@ private:
   rclcpp::Client<xyz_interfaces::srv::YutThrow>::SharedPtr client_throw;          // 던지게 하는 클라이언트
   rclcpp::Client<xyz_interfaces::srv::YutPosition>::SharedPtr client_yut_pos;     // 던진 후 YUt의 위치
   rclcpp::Client<xyz_interfaces::srv::YutPick>::SharedPtr client_pick_put;
-  rclcpp::Client<xyz_interfaces::srv::SayBoardState>::SharedPtr client_say_board;
-  rclcpp::Client<xyz_interfaces::srv::SaySpecialState>::SharedPtr client_say_special;
+  rclcpp::Client<xyz_interfaces::srv::NextTurn>::SharedPtr Client_next_turn;
+  //rclcpp::Client<xyz_interfaces::srv::NextTurn>::SharedPtr ;
+  //rclcpp::Client<xyz_interfaces::srv::SayBoardState>::SharedPtr client_say_board;
+  //rclcpp::Client<xyz_interfaces::srv::SaySpecialState>::SharedPtr client_say_special;
 
   void topic_callback(const std_msgs::msg::Bool::SharedPtr msg)
   {
 
     this->turn_count++;
+    yourturn_active_ = false;
 
     std::cout << "turn_count" << turn_count << std::endl;
   }
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr subscription_;
   rclcpp::TimerBase::SharedPtr timer_;
+
+  bool yourturn_active_ = true;
 };
