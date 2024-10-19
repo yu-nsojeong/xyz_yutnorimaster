@@ -17,6 +17,8 @@
 
 #include "xyz_interfaces/srv/next_turn.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "xyz_interfaces/msg/say_board_state.hpp"
+#include "xyz_interfaces/msg/say_special_state.hpp"
 
 
 class Player // 플레이어의 정보를 담고 있는 클래스
@@ -46,7 +48,7 @@ public:
         {20, {580.0, -40.0, 0, 0}}, {21, {540.0, -80.0, 0, 0}}, {22, {480.0, -145.0, 3, 0}},  {23,  {420.0, -205.0, 0, 0}}, {24, {380.0, -245.0, 0, 0}},
         {25, {380.0, -45.0, 0, 0}}, {26, {425.0, -85.0, 0, 0}}, {27, {480.0, -145.0, 3, 0}},  {28, {540.0, -205.0, 0, 0}},  {29, {580.0, -245.0, 0, 0}},
 
-        {-1, {390.0, 76.0, 0, 0}},    {-2, {450.0, 77.0, 0, 0}},  {-3, {510.0, 80.0, 3, 0}},  {-4, {570.0, 80.0, 3, 0}},
+        {-1, {390.0, 76.0, 0, 90}},    {-2, {450.0, 77.0, 0, 90}},  {-3, {510.0, 80.0, 3, 90}},  {-4, {570.0, 80.0, 3, 90}},
         {-5, {390.0, -370.0, 0, 0}},  {-6, {450.0, -370.0, 0, 0}},{-7, {510.0, -370.0, 3, 0}},{-8, {570.0, -370.0, 3, 0}},
 
         {30, {100.0, -305.0, 0, 0}}
@@ -82,42 +84,41 @@ class Master : public rclcpp::Node
 public:
   Player robot;       // my
   Player player;      // other
-  int turn_count = 0; // 0으로 리셋(0이 첫번째)
+  int turn_count = -1; // -1으로 리셋(-1이 첫번째) 0이 되면 게임 시작
   int player_num = 2; // 몇명의 플레이어가 있는지
   int current_yut;    // 윷 상태// 도 :1,개: 2,걸 : 3, 윷 : 4, 모 : 5, 빽도 : -1
   bool kill_flag = false;
 
   Master() : Node("yutnori_master"), robot(0), player(1)
   {
-
-    // timer_ = this->create_wall_timer(
-    //     std::chrono::seconds(1),
-    //     std::bind(&Master::timer_callback, this));
-
     // 서비스 클라이언트 생성
-    client_yut = this->create_client<xyz_interfaces::srv::YutnoriYutState>("yutnori_yut_state");
+    client_yut = this->create_client<xyz_interfaces::srv::YutnoriYutState>("yut_state");
     client_board = this->create_client<xyz_interfaces::srv::YutnoriBoardState>("board_state");
     client_pickplace = this->create_client<xyz_interfaces::srv::PickPlace>("pick_place");
     client_throw = this->create_client<xyz_interfaces::srv::YutThrow>("yut_throw");
     client_yut_pos = this->create_client<xyz_interfaces::srv::YutPosition>("yut_position");
     client_pick_put = this->create_client<xyz_interfaces::srv::YutPick>("yut_pick");
     Client_next_turn = this->create_client<xyz_interfaces::srv::NextTurn>("next_turn");
-    //client_say_board = this->create_client<xyz_interfaces::srv::SayBoardState>("say_board_state");
-    //client_say_special = this->create_client<xyz_interfaces::srv::SaySpecialState>("say_special_state");
+    Publisher_say_board_state = this->create_publisher<xyz_interfaces::msg::SayBoardState>("say_board_state_topic",100);
+
 
     subscription_ = this->create_subscription<std_msgs::msg::Bool>(
         "topic", 10, std::bind(&Master::topic_callback, this, std::placeholders::_1));
 
-    // // 서비스가 준비될 때까지 대기
-    // while (!client_pickplace->wait_for_service(std::chrono::seconds(1))){RCLCPP_INFO(this->get_logger(), "Waiting for service2 to appear...");}
 
-    RCLCPP_INFO(this->get_logger(), "Wait...");
+    while(turn_count == -1 )
+    {
+
+      RCLCPP_INFO(get_logger(),"GMAE LOADING... ...");
+      send_request_next_turn();
+
+    }
+
 
 
     while(1)
     {
       playGame();
-
     }
 
   } // 노드 이름을 명시적으로 설정
@@ -158,6 +159,25 @@ public:
   void send_request_yut_pick(float x, float y, float z, float r);
 
   void send_request_next_turn();
+  void send_msg_say_board_state(int state  = 0);
+
+
+  int game_state_flag;
+  bool start_flag = false;
+  bool in_game_flag = false;
+  bool end_game_flag = false;
+
+  #define GAME_START 0
+  #define IN_GAME 1
+  #define END_GAME 2
+
+  #define YUT_THROW 3
+  #define MY_TURN_RES 4
+  #define BUTTON_PUSH 5
+
+
+
+
 
   //void send_request_say_board_state();
   //void send_request_say_special_state(const std::string &say);
@@ -165,23 +185,23 @@ public:
   {
 
     std::cout << " robot : " << std::endl;
-    for (int i = 0; i < robot.location.size(); i++)
+    for (size_t i = 0; i < robot.location.size(); i++)
     {
       std::cout << robot.location[i].first << " ";
     }
     std::cout << std::endl;
-    for (int i = 0; i < robot.location.size(); i++)
+    for (size_t i = 0; i < robot.location.size(); i++)
     {
       std::cout << robot.location[i].second << " ";
     }
     std::cout << std::endl;
     std::cout << " player : " << std::endl;
-    for (int i = 0; i < player.location.size(); i++)
+    for (size_t i = 0; i < player.location.size(); i++)
     {
       std::cout << player.location[i].first << " ";
     }
     std::cout << std::endl;
-    for (int i = 0; i < player.location.size(); i++)
+    for (size_t i = 0; i < player.location.size(); i++)
     {
       std::cout << player.location[i].second << " ";
     }
@@ -191,10 +211,10 @@ public:
 private:
   const float c[4] = {2, 73, 10, 0}; // yut container centor
   float yut_container[4][4] = {
-      {c[0] + 1.5, c[1] + 1.5, c[3] + 0, c[4] + 0},
-      {c[0] - 1.5, c[2] + 1.5, c[3] + 0, c[4] + 0},
-      {c[0] + 1.5, c[2] - 1.5, c[3] + 0, c[4] + 0},
-      {c[0] - 1.5, c[3] - 1.5, c[3] + 0, c[4] + 0}};
+      {c[0] + 1.5f, c[1] + 1.5f, c[3] + 0.f, c[4] + 0.f},
+      {c[0] - 1.5f, c[2] + 1.5f, c[3] + 0.f, c[4] + 0.f},
+      {c[0] + 1.5f, c[2] - 1.5f, c[3] + 0.f, c[4] + 0.f},
+      {c[0] - 1.5f, c[3] - 1.5f, c[3] + 0.f, c[4] + 0.f}};
 
   rclcpp::Client<xyz_interfaces::srv::YutnoriYutState>::SharedPtr client_yut;     // Yut 던지고 어떤 윷이 나왔는지 알게 해 주는 스마트 포인터
   rclcpp::Client<xyz_interfaces::srv::YutnoriBoardState>::SharedPtr client_board; // 현재 보드 상태가 어떤지(상태) 말 위치와 말 몇개 올려있는지
@@ -203,17 +223,17 @@ private:
   rclcpp::Client<xyz_interfaces::srv::YutPosition>::SharedPtr client_yut_pos;     // 던진 후 YUt의 위치
   rclcpp::Client<xyz_interfaces::srv::YutPick>::SharedPtr client_pick_put;
   rclcpp::Client<xyz_interfaces::srv::NextTurn>::SharedPtr Client_next_turn;
-  //rclcpp::Client<xyz_interfaces::srv::NextTurn>::SharedPtr ;
-  //rclcpp::Client<xyz_interfaces::srv::SayBoardState>::SharedPtr client_say_board;
-  //rclcpp::Client<xyz_interfaces::srv::SaySpecialState>::SharedPtr client_say_special;
+  rclcpp::Publisher<xyz_interfaces::msg::SayBoardState>::SharedPtr Publisher_say_board_state;
+
 
   void topic_callback(const std_msgs::msg::Bool::SharedPtr msg)
   {
 
-    this->turn_count++;
-    yourturn_active_ = false;
 
-    std::cout << "turn_count" << turn_count << std::endl;
+    send_msg_say_board_state(BUTTON_PUSH);
+    // this->turn_count++;
+    // yourturn_active_ = false;
+
   }
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr subscription_;
   rclcpp::TimerBase::SharedPtr timer_;
