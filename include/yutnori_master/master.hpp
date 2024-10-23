@@ -17,6 +17,7 @@
 
 #include "xyz_interfaces/srv/next_turn.hpp"
 #include "std_msgs/msg/bool.hpp"
+#include "std_msgs/msg/int16.hpp"
 #include "xyz_interfaces/msg/say_board_state.hpp"
 #include "xyz_interfaces/msg/say_special_state.hpp"
 
@@ -36,24 +37,43 @@ public:
   const int short_cut_index[4] = {5, 10, 22, 27}; // 지름길 인덱스
 
   const float bc[4] = {0, 0, 0, 0};
+  float robot_move_y = (37.5) * 4;
 
+  // const std::map<int, std::tuple<float, float, float, float>> board_coor =
+  //     {
+
+  //       {0, {640.0, -305.0 + robot_move_y, 5, 0}}, {1, {640.0, -235.0 +robot_move_y , 5, 0}}, {2, {640.0, -180.0, 5, 0}}, {3, {640.0, -120.0, 5, 0}}, {4, {640.0, -60.0, 5, 0}},
+  //       {5, {640.0, 20.0 + robot_move_y, 5, 0}},   {6, {570.0, 19.0 + robot_move_y, 3, 0}},   {7, {510.0, 18.0, 1, 0}},   {8, {450.0, 17.0, 0, 0}},   {9, {390.0, 16.0, 0, 0}},
+  //       {10, {320.0, 15.0 + robot_move_y, 0, 0}},  {11, {320.0, -55.0, 3, 0}}, {12, {320.0, -115.0, 1, 0}},{13, {320.0, -175.0, 0, 0}},{14, {320.0, -235.0, 0, 0}},
+  //       {15, {320.0, -305.0 + robot_move_y,0, 0}}, {16, {390.0, -305.0, 0, 0}},{17, {450.0, -305.0, 0, 0}},{18, {510.0, -305.0, 0, 0}},{19, {570.0, -305.0, 0, 0}},
+
+  //       {20, {580.0, -40.0, 0, 0}}, {21, {540.0, -80.0, 0, 0}}, {22, {480.0, -145.0, 3, 0}},  {23,  {420.0, -205.0, 0, 0}}, {24, {380.0, -245.0, 0, 0}},
+  //       {25, {380.0, -45.0, 0, 0}}, {26, {425.0, -85.0, 0, 0}}, {27, {480.0, -145.0, 3, 0}},  {28, {540.0, -205.0, 0, 0}},  {29, {580.0, -245.0, 0, 0}},
+
+  //       {-1, {390.0, 76.0, 0, 90}},    {-2, {450.0, 77.0, 0, 90}},  {-3, {510.0, 80.0, 3, 90}},  {-4, {570.0, 80.0, 3, 90}},
+  //       {-5, {390.0, -370.0, 0, 0}},  {-6, {450.0, -370.0, 0, 0}},{-7, {510.0, -370.0, 3, 0}},{-8, {570.0, -370.0, 3, 0}},
+
+  //       {30, {100.0, -305.0, 0, 0}}
+
+  //     };
   const std::map<int, std::tuple<float, float, float, float>> board_coor =
-      {
+    {
 
-        {0, {640.0, -305.0, 5, 0}}, {1, {640.0, -235.0, 5, 0}}, {2, {640.0, -180.0, 5, 0}}, {3, {640.0, -120.0, 5, 0}}, {4, {640.0, -60.0, 5, 0}},
-        {5, {640.0, 20.0, 5, 0}},   {6, {570.0, 19.0, 3, 0}},   {7, {510.0, 18.0, 1, 0}},   {8, {450.0, 17.0, 0, 0}},   {9, {390.0, 16.0, 0, 0}},
-        {10, {320.0, 15.0, 0, 0}},  {11, {320.0, -55.0, 3, 0}}, {12, {320.0, -115.0, 1, 0}},{13, {320.0, -175.0, 0, 0}},{14, {320.0, -235.0, 0, 0}},
-        {15, {320.0, -305.0,0, 0}}, {16, {390.0, -305.0, 0, 0}},{17, {450.0, -305.0, 0, 0}},{18, {510.0, -305.0, 0, 0}},{19, {570.0, -305.0, 0, 0}},
+      {0, {640.0, -305.0 + robot_move_y, 5, 0}}, {1, {640.0, -235.0 + robot_move_y, 5, 0}}, {2, {640.0, -180.0 + robot_move_y, 5, 0}}, {3, {640.0, -120.0 + robot_move_y, 5, 0}}, {4, {640.0, -60.0 + robot_move_y, 5, 0}},
+      {5, {640.0, 20.0 + robot_move_y, 5, 0}},   {6, {570.0, 19.0 + robot_move_y, 3, 0}},   {7, {510.0, 18.0 + robot_move_y, 1, 0}},   {8, {450.0, 17.0 + robot_move_y, 0, 0}},   {9, {390.0, 16.0 + robot_move_y, 0, 0}},
+      {10, {320.0, 15.0 + robot_move_y, 0, 0}},  {11, {320.0, -55.0 + robot_move_y, 3, 0}}, {12, {320.0, -115.0 + robot_move_y, 1, 0}}, {13, {320.0, -175.0 + robot_move_y, 0, 0}}, {14, {320.0, -235.0 + robot_move_y, 0, 0}},
+      {15, {320.0, -305.0 + robot_move_y, 0, 0}}, {16, {390.0, -305.0 + robot_move_y, 0, 0}}, {17, {450.0, -305.0 + robot_move_y, 0, 0}}, {18, {510.0, -305.0 + robot_move_y, 0, 0}}, {19, {570.0, -305.0 + robot_move_y, 0, 0}},
 
-        {20, {580.0, -40.0, 0, 0}}, {21, {540.0, -80.0, 0, 0}}, {22, {480.0, -145.0, 3, 0}},  {23,  {420.0, -205.0, 0, 0}}, {24, {380.0, -245.0, 0, 0}},
-        {25, {380.0, -45.0, 0, 0}}, {26, {425.0, -85.0, 0, 0}}, {27, {480.0, -145.0, 3, 0}},  {28, {540.0, -205.0, 0, 0}},  {29, {580.0, -245.0, 0, 0}},
+      {20, {580.0, -40.0 + robot_move_y, 0, 0}}, {21, {540.0, -80.0 + robot_move_y, 0, 0}}, {22, {480.0, -145.0 + robot_move_y, 3, 0}},  {23, {420.0, -205.0 + robot_move_y, 0, 0}}, {24, {380.0, -245.0 + robot_move_y, 0, 0}},
+      {25, {380.0, -45.0 + robot_move_y, 0, 0}}, {26, {425.0, -85.0 + robot_move_y, 0, 0}}, {27, {480.0, -145.0 + robot_move_y, 3, 0}},  {28, {540.0, -205.0 + robot_move_y, 0, 0}},  {29, {580.0, -245.0 + robot_move_y, 0, 0}},
 
-        {-1, {390.0, 76.0, 0, 90}},    {-2, {450.0, 77.0, 0, 90}},  {-3, {510.0, 80.0, 3, 90}},  {-4, {570.0, 80.0, 3, 90}},
-        {-5, {390.0, -370.0, 0, 0}},  {-6, {450.0, -370.0, 0, 0}},{-7, {510.0, -370.0, 3, 0}},{-8, {570.0, -370.0, 3, 0}},
+      {-1, {390.0+60, 76.0 + robot_move_y, 0, 90}}, {-2, {450.0+60, 77.0 + robot_move_y, 0, 90}}, {-3, {510.0+60, 80.0 + robot_move_y, 3, 90}}, {-4, {570.0+60, 80.0 + robot_move_y, 3, 90}},
+      {-5, {390.0, -370.0 + robot_move_y, 0, 0}}, {-6, {450.0, -370.0 + robot_move_y, 0, 0}}, {-7, {510.0, -370.0 + robot_move_y, 3, 0}}, {-8, {570.0, -370.0 + robot_move_y, 3, 0}},
 
-        {30, {100.0, -305.0, 0, 0}}
+      {30, {100.0, -305.0 + robot_move_y, 0, 0}}
 
-      };
+    };
+
 
   // 플레이어 보드의 사항
   //
@@ -101,9 +121,14 @@ public:
     Client_next_turn = this->create_client<xyz_interfaces::srv::NextTurn>("next_turn");
     Publisher_say_board_state = this->create_publisher<xyz_interfaces::msg::SayBoardState>("say_board_state_topic",100);
 
+    publisher_resui = this->create_publisher<std_msgs::msg::Int16>("res",100);
 
     subscription_ = this->create_subscription<std_msgs::msg::Bool>(
         "topic", 10, std::bind(&Master::topic_callback, this, std::placeholders::_1));
+    subscription_ = this->create_subscription<std_msgs::msg::Bool>(
+        "start", 10, std::bind(&Master::start_callback, this, std::placeholders::_1));
+
+    player.location.clear();
 
 
     while(turn_count == -1 )
@@ -156,11 +181,16 @@ public:
   void send_request_yut_throw();
   void send_request_board_state(std::vector<std::pair<int, int>> &player1,
                                 std::vector<std::pair<int, int>> &player2);
-  void send_request_yut_pick(float x, float y, float z, float r);
+  void send_request_yut_pick(float x, float y, float z, float r, int left);
 
   void send_request_next_turn();
   void send_msg_say_board_state(int state  = 0);
 
+
+  void check_goal_tokens(std::vector<std::pair<int, int>> &befor, // pair <pos_index, token num>
+                                      std::vector<std::pair<int, int>> &after);
+
+  int kill_tokens = 0;
 
   int game_state_flag;
   bool start_flag = false;
@@ -226,6 +256,18 @@ private:
   rclcpp::Publisher<xyz_interfaces::msg::SayBoardState>::SharedPtr Publisher_say_board_state;
 
 
+  rclcpp::Publisher<std_msgs::msg::Int16>::SharedPtr publisher_resui;
+
+  const std::map<int, int> vtom_coor = {
+    {20,27},{21,25},
+    {22,26},{23,20},
+    {24,21},{25,24},
+    {26,23},{27,29},
+    {28,28}
+  };
+
+  int mapping(int input);
+
   void topic_callback(const std_msgs::msg::Bool::SharedPtr msg)
   {
 
@@ -234,6 +276,14 @@ private:
     // this->turn_count++;
     // yourturn_active_ = false;
 
+  }
+
+  void start_callback(const std_msgs::msg::Bool::SharedPtr msg)
+  {
+      std :: cout<<"시작이 왔다."<<std::endl;
+
+      this->turn_count++;
+    // yourturn_active_ = false;
   }
   rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr subscription_;
   rclcpp::TimerBase::SharedPtr timer_;
