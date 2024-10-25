@@ -109,7 +109,7 @@ public:
   int current_yut;    // 윷 상태// 도 :1,개: 2,걸 : 3, 윷 : 4, 모 : 5, 빽도 : -1
   bool kill_flag = false;
 
-  Master() : Node("yutnori_master"), robot(0), player(1)
+  Master() : Node("yutnori_master"), robot(1), player(0)
   {
     // 서비스 클라이언트 생성
     client_yut = this->create_client<xyz_interfaces::srv::YutnoriYutState>("yut_state");
@@ -196,6 +196,7 @@ public:
   bool start_flag = false;
   bool in_game_flag = false;
   bool end_game_flag = false;
+  bool end_say_flag = true;
 
   #define GAME_START 0
   #define IN_GAME 1
@@ -204,6 +205,7 @@ public:
   #define YUT_THROW 3
   #define MY_TURN_RES 4
   #define BUTTON_PUSH 5
+  #define KILL 6
 
 
 
@@ -271,7 +273,7 @@ private:
   void topic_callback(const std_msgs::msg::Bool::SharedPtr msg)
   {
 
-
+    RCLCPP_WARN(get_logger(),"talk callback!!!");
     send_msg_say_board_state(BUTTON_PUSH);
     // this->turn_count++;
     // yourturn_active_ = false;

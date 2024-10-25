@@ -13,7 +13,7 @@ bool Master::isMyTurn(const Player &player)
 void Master::playGame()
 {
 
-#define testmode 1
+#define testmode 0
 
   RCLCPP_WARN(this->get_logger(), "Game Player");
   if (!endGame())
@@ -26,18 +26,18 @@ void Master::playGame()
       // 내 보드 보고 업데이트 잡혔을 때를 대비
       print_dbg();
       RCLCPP_WARN(this->get_logger(), "seeMyBoard!");
-      seeMyBoard(); //! 수정요함
+      seeMyBoard();
 
       RCLCPP_INFO(this->get_logger(), "myturn...");
-      // 윷 정리 //윷 위치 받아오기.(4개 다? 부딪히면 난리나니까 걍 4번 반복이 나을 듯)//위치 이동, 모션 실행 //
 
+      // 윷 정리
       RCLCPP_INFO(this->get_logger(), "cleanUpBoard...!!!");
-      //cleanUpBoard();
+      cleanUpBoard();
 
       // 윷을 던지기 (잡기)
       send_msg_say_board_state(YUT_THROW);
       RCLCPP_WARN(this->get_logger(), "Throw Yut!");
-      //throwYut();
+      throwYut();
 
       // 윷의 상태 확인(결과)
       int yut_state;
@@ -120,6 +120,11 @@ void Master::playGame()
     publisher_resui->publish(msg);
 
     }
+    if(end_say_flag){
+          send_msg_say_board_state(END_GAME);
+          end_say_flag = false;
+    }
+
 
 
   }
@@ -391,7 +396,13 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
   for (size_t i = 0; i < robot.location.size(); ++i) // 말의 다음위치 구하기 현재 위치가 지름길 위치인지? 지름길 위치라면 들어간 걸로 숫자 바꿔주기 아니라면 그냥 더하기
   {
     int current_pos = robot.location[i].first;   // index
-    if (robot.short_cut_index[0] == current_pos) // 5
+    if(current_yut == -1 && current_pos < 0)
+    {
+
+      new_pos[i] = 19;
+
+    }
+    else if (robot.short_cut_index[0] == current_pos) // 5
     {
       new_pos[i] = 19 + move_steps;
     }
@@ -437,12 +448,11 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
         RCLCPP_INFO(this->get_logger(), "Captured opponent's piece at position %d!  %d", new_pos[i],max_tokens);
 
         // send_request_say_special_state(std::string("Write down what you want to say when you catch the opponent's token"));
-        pickAndPlace(new_pos[i], 0); // 겹치는 부분 치우는 부분
+
         // player[j].pieces_location[k] = 0; // 상대 말 다시 시작 위치로
 
         if (max_tokens <= player.location[k].second) // 잡을 수 있는 것 중 토큰이 큰 것
         {
-
                           // update
           index = i;                                 // 움직일 말의 인덱스
           max_tokens = player.location[k].second;
@@ -456,7 +466,8 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
 
   if (kill_flag)
   {
-
+    send_msg_say_board_state(KILL);
+    pickAndPlace(new_pos[index], 0); // 겹치는 부분 치우는 부분
     return index;
   }
 
@@ -494,7 +505,7 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
   if (Arrivalflag)
   {
     next_pos = 30;
-    //! send_request_say_special_state(std::string("My token has reached the destination, and I earned points!"));
+
     return index;
   };
 
@@ -862,6 +873,9 @@ void Master::send_msg_say_board_state(int state)
     break;
   case BUTTON_PUSH:
     message.button_pushed = true; // 게임 도중 버튼을 눌러 대화를 시도할 때 flag
+    break;
+  case KILL:
+    message.kill_flag = true;
     break;
   default:
     break;
