@@ -33,6 +33,8 @@ void Master::playGame()
       // 윷 정리
       RCLCPP_INFO(this->get_logger(), "cleanUpBoard...!!!");
       cleanUpBoard();
+      if (endGame()){return;}
+
 
       // 윷을 던지기 (잡기)
       send_msg_say_board_state(YUT_THROW);
@@ -443,7 +445,7 @@ int Master::boardAnalysis(int current_yut, int &next_pos)
   {
     for (size_t k = 0; k < player.location.size(); ++k)
     {
-      if (player.location[k].first == new_pos[i]) // 같은 위치에 상대 말이 있는지 확인
+      if (player.location[k].first == new_pos[i] || ((player.location[k].first == 27)&&(new_pos[i] == 22))) // 같은 위치에 상대 말이 있는지 확인
       {
         RCLCPP_INFO(this->get_logger(), "Captured opponent's piece at position %d!  %d", new_pos[i],max_tokens);
 
